@@ -236,12 +236,6 @@ export default function TodayPage({ currentDate, onDateChange }: TodayPageProps)
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
           >
-            <button
-              className="add-form-close"
-              onClick={() => { setFabOpen(false); setNewText('') }}
-            >
-              ×
-            </button>
             <div className="need-selector">
               {NEEDS.map((n) => (
                 <button

@@ -88,16 +88,18 @@ export default function ReviewPage({ currentDate, onDateChange }: ReviewPageProp
       <div className="review-write">
         {editing ? (
           <>
-            <textarea
-              ref={textareaRef}
-              className="review-textarea"
-              placeholder="写下你的感受..."
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-            />
-            <div className="review-actions">
-              <button className="review-cancel-btn" onClick={handleCancel}>取消</button>
-              <button className="review-save-btn" onClick={handleSave}>保存</button>
+            <div className="review-edit-block">
+              <textarea
+                ref={textareaRef}
+                className="review-textarea"
+                placeholder="写下你的感受..."
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+              />
+              <div className="review-actions">
+                <button className="review-cancel-btn" onClick={handleCancel}>取消</button>
+                <button className="review-save-btn" onClick={handleSave}>保存</button>
+              </div>
             </div>
           </>
         ) : (

@@ -1,3 +1,7 @@
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
 :root {
     --bg: #f5f0eb;
     --text: #3d3529;
@@ -374,9 +378,16 @@ body {
 }
 
 /* 编辑态 */
+.review-edit-block {
+    display: flex;
+    flex-direction: column;
+}
+
 .review-textarea {
-    flex: 1;
-    min-height: 180px;
+    width: 100%;
+    height: 140px;
+    min-height: 120px;
+    max-height: 150px;
     border: 1.5px solid #e0dbd5;
     border-radius: 10px;
     padding: 14px;
@@ -388,6 +399,7 @@ body {
     outline: none;
     line-height: 1.7;
     transition: border-color 0.2s;
+    box-sizing: border-box;
 }
 
 .review-textarea:focus {
@@ -402,7 +414,7 @@ body {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
-    margin-top: 12px;
+    margin-top: 8px;
 }
 
 .review-cancel-btn {
@@ -826,28 +838,6 @@ body {
     }
 }
 
-.add-form-close {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: none;
-    font-size: 20px;
-    color: var(--text);
-    opacity: 0.5;
-    cursor: pointer;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.add-form-close:hover {
-    opacity: 1;
-    background: rgba(0, 0, 0, 0.05);
-}
 
 @keyframes slideUp {
     from {
