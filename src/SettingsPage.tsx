@@ -133,7 +133,6 @@ export default function SettingsPage() {
         <div className="settings-info">
           <p className="settings-app-name">Wolfie</p>
           <p className="settings-version">Version 1.0</p>
-          <p className="settings-tagline">以出世的心做入世的事</p>
         </div>
       </div>
 
