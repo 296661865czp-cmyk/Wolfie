@@ -546,14 +546,18 @@ body {
 }
 
 .chart-label {
-    font-size: 9px;
+    font-size: 11px;
     opacity: 0.5;
     margin-top: 4px;
     text-align: center;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    height: 14px;
+    line-height: 14px;
+}
+
+.chart-label-spacer {
+    display: block;
+    height: 18px;
 }
 
 /* 归因分布 */

@@ -8,7 +8,7 @@ const WEEKDAYS_SHORT = ['日', '一', '二', '三', '四', '五', '六']
 const RANGES = [
   { key: '7d', label: '近7天', days: 7 },
   { key: '30d', label: '近30天', days: 30 },
-  { key: 'all', label: '全部', days: 0 },
+  { key: '1y', label: '近1年', days: 0 },
 ] as const
 
 type RangeKey = (typeof RANGES)[number]['key']
@@ -31,18 +31,16 @@ function getDatesInRange(days: number): string[] {
   return dates
 }
 
-function getAllDates(tasks: Task[]): string[] {
-  if (tasks.length === 0) return []
-  const dates = [...new Set(tasks.map((t) => t.date))].sort()
-  return dates
-}
-
-function aggregateByWeek(dates: string[]): string[][] {
-  const weeks: string[][] = []
-  for (let i = 0; i < dates.length; i += 7) {
-    weeks.push(dates.slice(i, i + 7))
+function getLast12Months(): { key: string; label: string }[] {
+  const months: { key: string; label: string }[] = []
+  const now = new Date()
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = `${d.getMonth() + 1}月`
+    months.push({ key, label })
   }
-  return weeks
+  return months
 }
 
 function formatShortDate(dateStr: string): string {
@@ -59,15 +57,6 @@ export default function StatsPage() {
   }, [])
 
   const buildDayData = useCallback((): DayData[] => {
-    let dates: string[]
-
-    if (range === 'all') {
-      dates = getAllDates(tasks)
-    } else {
-      const days = RANGES.find((r) => r.key === range)!.days
-      dates = getDatesInRange(days)
-    }
-
     // Group tasks by date
     const byDate = new Map<string, { total: number; done: number }>()
     for (const t of tasks) {
@@ -77,44 +66,36 @@ export default function StatsPage() {
       byDate.set(t.date, entry)
     }
 
-    // For all mode with >60 days, aggregate by week
-    if (range === 'all' && dates.length > 60) {
-      const weeks = aggregateByWeek(dates)
-      return weeks.map((weekDates) => {
+    if (range === '1y') {
+      // Aggregate by month: fixed 12 bars
+      const months = getLast12Months()
+      return months.map((m) => {
         let total = 0
         let done = 0
-        for (const d of weekDates) {
-          const entry = byDate.get(d)
-          if (entry) {
+        for (const [dateStr, entry] of byDate) {
+          if (dateStr.startsWith(m.key)) {
             total += entry.total
             done += entry.done
           }
         }
-        const first = weekDates[0]
-        const last = weekDates[weekDates.length - 1]
-        return {
-          date: first,
-          label: `${formatShortDate(first)}-${formatShortDate(last)}`,
-          total,
-          done,
-        }
+        return { date: m.key, label: m.label, total, done }
       })
     }
 
-    return dates.map((d) => {
+    const days = RANGES.find((r) => r.key === range)!.days
+    const dates = getDatesInRange(days)
+
+    return dates.map((d, i) => {
       const [y, m, day] = d.split('-').map(Number)
       const dateObj = new Date(y, m - 1, day)
       const entry = byDate.get(d)
-      // For 30d, only show label on Mondays
       let label = ''
       if (range === '7d') {
         label = `周${WEEKDAYS_SHORT[dateObj.getDay()]} ${formatShortDate(d)}`
       } else if (range === '30d') {
-        if (dateObj.getDay() === 1) {
+        if (i % 7 === 0) {
           label = formatShortDate(d)
         }
-      } else {
-        label = formatShortDate(d)
       }
       return {
         date: d,
@@ -129,8 +110,15 @@ export default function StatsPage() {
   const maxVal = Math.max(1, ...dayData.map((d) => d.total))
 
   // Attribution counts for selected range
-  const rangeDateSet = new Set(dayData.map((d) => d.date))
-  const rangeTasks = range === 'all' ? tasks : tasks.filter((t) => rangeDateSet.has(t.date))
+  const rangeTasks = range === '1y'
+    ? tasks.filter((t) => {
+        const now = new Date()
+        const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+        const [y, m, d] = t.date.split('-').map(Number)
+        const td = new Date(y, m - 1, d)
+        return td >= oneYearAgo
+      })
+    : tasks.filter((t) => dayData.some((d) => d.date === t.date))
   const sonataTotal = rangeTasks.filter((t) => t.need === 'sonata').length
   const operaTotal = rangeTasks.filter((t) => t.need === 'opera').length
   const dutyTotal = rangeTasks.filter((t) => t.need === 'duty').length
@@ -177,7 +165,7 @@ export default function StatsPage() {
                       style={{ height: `${(d.done / maxVal) * 100}%` }}
                     />
                   </div>
-                  {d.label && <span className="chart-label">{d.label}</span>}
+                  {d.label ? <span className="chart-label">{d.label}</span> : <span className="chart-label-spacer" />}
                 </div>
               ))}
             </div>
