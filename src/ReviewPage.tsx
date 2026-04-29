@@ -2,6 +2,26 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { dbGetTasksByDate, dbPut, dbGet } from './db'
 import type { Task, Review } from './db'
 import DateNav from './DateNav'
+import { exportWeeklyMarkdown, triggerDownload } from './weeklyExport'
+
+function useKeyboardOpen(): boolean {
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+
+    const initialHeight = vv.height
+    const handleResize = () => {
+      setOpen(vv.height < initialHeight - 150)
+    }
+
+    vv.addEventListener('resize', handleResize)
+    return () => vv.removeEventListener('resize', handleResize)
+  }, [])
+
+  return open
+}
 
 interface ReviewPageProps {
   currentDate: string
@@ -60,58 +80,82 @@ export default function ReviewPage({ currentDate, onDateChange }: ReviewPageProp
   const operaDone = tasks.filter((t) => t.need === 'opera' && t.done).length
   const dutyDone = tasks.filter((t) => t.need === 'duty' && t.done).length
 
+  const [y, m, d] = currentDate.split('-').map(Number)
+  const isSunday = new Date(y, m - 1, d).getDay() === 0
+  const keyboardOpen = useKeyboardOpen()
+
+  const handleExport = async () => {
+    const { filename, content } = await exportWeeklyMarkdown(new Date(y, m - 1, d))
+    triggerDownload(filename, content)
+  }
+
   return (
-    <div className="review-page">
-      <DateNav currentDate={currentDate} onDateChange={onDateChange} />
+    <>
+      <div className="review-page">
+        <DateNav currentDate={currentDate} onDateChange={onDateChange} />
 
-      {/* 当日数据摘要 */}
-      <div className="review-summary">
-        <div className="summary-item">
-          <span className="summary-value">{done}/{total}</span>
-          <span className="summary-label">完成</span>
-        </div>
-        <div className="summary-item">
-          <span className="summary-value" style={{ color: 'var(--sonata)' }}>{sonataDone}</span>
-          <span className="summary-label">Sonata</span>
-        </div>
-        <div className="summary-item">
-          <span className="summary-value" style={{ color: 'var(--opera)' }}>{operaDone}</span>
-          <span className="summary-label">Opera</span>
-        </div>
-        <div className="summary-item">
-          <span className="summary-value" style={{ color: 'var(--duty)' }}>{dutyDone}</span>
-          <span className="summary-label">Duty</span>
-        </div>
-      </div>
-
-      {/* 回顾文本 */}
-      <div className="review-write">
-        {editing ? (
-          <>
-            <div className="review-edit-block">
-              <textarea
-                ref={textareaRef}
-                className="review-textarea"
-                placeholder="写下你的感受..."
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-              />
-              <div className="review-actions">
-                <button className="review-cancel-btn" onClick={handleCancel}>取消</button>
-                <button className="review-save-btn" onClick={handleSave}>保存</button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="review-display" onClick={handleEnterEdit}>
-            {savedText ? (
-              <p className="review-saved-text">{savedText}</p>
-            ) : (
-              <p className="review-placeholder">记录今天的感受...</p>
-            )}
+        {/* 当日数据摘要 */}
+        <div className="review-summary">
+          <div className="summary-item">
+            <span className="summary-value">{done}/{total}</span>
+            <span className="summary-label">完成</span>
           </div>
-        )}
+          <div className="summary-item">
+            <span className="summary-value" style={{ color: 'var(--sonata)' }}>{sonataDone}</span>
+            <span className="summary-label">Sonata</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-value" style={{ color: 'var(--opera)' }}>{operaDone}</span>
+            <span className="summary-label">Opera</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-value" style={{ color: 'var(--duty)' }}>{dutyDone}</span>
+            <span className="summary-label">Duty</span>
+          </div>
+        </div>
+
+        {/* 回顾文本 */}
+        <div className="review-write">
+          {editing ? (
+            <>
+              <div className="review-edit-block">
+                <textarea
+                  ref={textareaRef}
+                  className="review-textarea"
+                  placeholder="写下你的感受..."
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                />
+                <div className="review-actions">
+                  <button className="review-cancel-btn" onClick={handleCancel}>取消</button>
+                  <button className="review-save-btn" onClick={handleSave}>保存</button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="review-display" onClick={handleEnterEdit}>
+              {savedText ? (
+                <p className="review-saved-text">{savedText}</p>
+              ) : (
+                <p className="review-placeholder">记录今天的感受...</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      {isSunday && (
+        <button
+          className={`export-fab${keyboardOpen ? ' export-fab--hidden' : ''}`}
+          onClick={handleExport}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
+      )}
+    </>
   )
 }
