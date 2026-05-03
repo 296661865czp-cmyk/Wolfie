@@ -1,13 +1,14 @@
 import { useState, useRef } from 'react'
-import { dbGetAll, dbPut, dbDelete } from './db'
-import type { Task, Review } from './db'
+import { dbGetAll, dbPut, dbDelete, metaSet } from './db'
+import type { Task, Review, Template } from './db'
+import TemplateList from './TemplateList'
 
 export default function SettingsPage() {
   const [toast, setToast] = useState('')
   const [importConfirm, setImportConfirm] = useState(false)
   const [importError, setImportError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const pendingData = useRef<{ tasks: Task[]; reviews: Review[] } | null>(null)
+  const pendingData = useRef<{ tasks: Task[]; reviews: Review[]; templates: Template[] } | null>(null)
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -18,11 +19,12 @@ export default function SettingsPage() {
   const handleExport = async () => {
     const tasks = await dbGetAll<Task>('tasks')
     const reviews = await dbGetAll<Review>('reviews')
+    const templates = await dbGetAll<Template>('templates')
     const backup = {
       app: 'wolfie',
       version: '1.0',
       exportedAt: new Date().toISOString(),
-      data: { tasks, reviews },
+      data: { tasks, reviews, templates },
     }
     const json = JSON.stringify(backup, null, 2)
     const blob = new Blob([json], { type: 'application/json' })
@@ -54,7 +56,11 @@ export default function SettingsPage() {
           setImportError('文件缺少必要的数据字段')
           return
         }
-        pendingData.current = { tasks: parsed.data.tasks, reviews: parsed.data.reviews }
+        pendingData.current = {
+          tasks: parsed.data.tasks,
+          reviews: parsed.data.reviews,
+          templates: parsed.data.templates ?? [],
+        }
         setImportConfirm(true)
       } catch {
         setImportError('无法解析文件内容')
@@ -68,7 +74,7 @@ export default function SettingsPage() {
   // 导入 — 确认
   const handleImportConfirm = async () => {
     if (!pendingData.current) return
-    const { tasks, reviews } = pendingData.current
+    const { tasks, reviews, templates } = pendingData.current
     // 清空并重新写入：先删再写
     const allTasks = await dbGetAll<Task>('tasks')
     for (const t of allTasks) {
@@ -78,12 +84,21 @@ export default function SettingsPage() {
     for (const r of allReviews) {
       await dbDelete('reviews', r.date)
     }
+    const allTemplates = await dbGetAll<Template>('templates')
+    for (const t of allTemplates) {
+      await dbDelete('templates', t.id)
+    }
     for (const t of tasks) {
       await dbPut('tasks', t)
     }
     for (const r of reviews) {
       await dbPut('reviews', r)
     }
+    for (const t of templates) {
+      await dbPut('templates', t)
+    }
+    // 清空 lastGeneratedDate，确保导入后立即生效
+    await metaSet('lastGeneratedDate', '')
     pendingData.current = null
     setImportConfirm(false)
     showToast('导入成功')
@@ -125,6 +140,12 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* 固定任务模板 */}
+      <div className="settings-section">
+        <h3 className="settings-section-title">任务</h3>
+        <TemplateList />
       </div>
 
       {/* 关于 */}

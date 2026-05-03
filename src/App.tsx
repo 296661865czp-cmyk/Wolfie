@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import TodayPage from './TodayPage'
 import ReviewPage from './ReviewPage'
 import StatsPage from './StatsPage'
 import SettingsPage from './SettingsPage'
 import { formatDate } from './dateUtils'
+import { generateTodayTemplateTasks } from './templateGenerator'
 
 const TabIcon = ({ children, active }: { children: React.ReactNode; active: boolean }) => (
   <svg
@@ -80,6 +81,11 @@ type TabKey = (typeof tabs)[number]['key']
 function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('today')
   const [currentDate, setCurrentDate] = useState(formatDate(new Date()))
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    generateTodayTemplateTasks().then(() => setReady(true))
+  }, [])
 
   const renderPage = () => {
     switch (activeTab) {
@@ -93,6 +99,8 @@ function App() {
         return <SettingsPage />
     }
   }
+
+  if (!ready) return null
 
   return (
     <>
