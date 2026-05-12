@@ -36,7 +36,7 @@ export async function generateTodayTemplateTasks(): Promise<void> {
     const task: Task = {
       id: uuid(),
       text: tpl.text,
-      need: 'duty',
+      need: 'opera',
       date: today,
       done: false,
       createdAt: now,
